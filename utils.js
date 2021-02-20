@@ -23,7 +23,7 @@ module.exports = {
     },
 
     /**
-     * @param {Number} ms Une durée en secondes
+     * @param {Number} ms Une durée en millisecondes
      * @param {Boolean} includeSec Un booléen indiquant s'il faut inclure les secondes
      * @returns {String} La durée formatée (YY?, MoMo?, DD?, HH?, MiMi?, SS? )
      */
@@ -115,6 +115,6 @@ Array.from([["fBlack", "\x1b[30m"], //Coloration methods
 ["reverse", "\x1b[7m"],
 ["hidden", "\x1b[8m"]]).forEach(color => {
     module.exports[color[0]] = (s) => {
-        return `${color[1]}${s.replace(/(\\x1b|)\[0m/g, "")}\x1b[0m`
+        return `${color[1]}${String(s).replace(/(\\x1b|)\[0m/g, "")}\x1b[0m`
     }
 })
