@@ -5,7 +5,8 @@
   "main": "checker.js",
   "dependencies": {
     "intl": "^1.2.5",
-    "node-fetch": "^2.6.1"
+    "node-fetch": "^2.6.1",
+    "proxy-agent": "^4.0.1"
   },
   "devDependencies": {},
   "scripts": {
