@@ -1,0 +1,22 @@
+{
+    "checker": {
+        "interval": 100,
+        "proxy": false,
+        "proxiesType": "http" ,
+        "proxiesfile": "./proxies/proxies.txt",
+        "debug": true,
+        "codesfile": "./codes/codes.txt",
+
+        "bURL": "https://discordapp.com/api/v8/entitlements/gift-codes/",
+        "params": "?with_application=false&with_subscription_plan=true"
+    },
+    "generator": {
+        "prefix": "",
+        "suffix": "",
+        "length": 16,
+        "random": true,
+        "amount": 50,
+        "debug": true,
+        "outfile": "./codes/codes.txt"
+    }
+}
