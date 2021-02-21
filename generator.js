@@ -1,17 +1,10 @@
 const fs = require('fs')
 const { performance } = require('perf_hooks')
 const { rand, duration, numberFormat } = require('./utils.js')
+const { prefix, suffix, length, random, amount, debug, outfile } = require('./config.json').generator
 
 const E = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789' //62
 const max = E.length-1
-
-const prefix = 'ncFhJpxWHPynJ'
-const suffix = 'LH'
-const length = 1 //16 by default
-const random = false //if false, will generate every combi possible
-const amount = 5 //number of codes to generate, enter in count if random is true
-const debug = true
-const outfile = 'codes .txt' //codes.txt by default
 
 const codes = []
 
@@ -29,7 +22,7 @@ const main = async () => {
         for (let n = 0; n < amount; n++) {
             let str = ''
             for (let i = 0; i < length; i++) {
-                str += E[Math.round(rand(0, E.length-1))]
+                str += E[Math.floor(rand(0, E.length-1))]
             }
             codes.push(prefix+str+suffix)
         }
@@ -65,8 +58,6 @@ const main = async () => {
             if (!c) break
 
         }
-
-
     }
     
     const end = performance.now()
