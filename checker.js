@@ -3,16 +3,8 @@ const ProxyAgent = require('proxy-agent');
 const fs = require('fs')
 const { performance } = require('perf_hooks')
 const { wait, duration, datetocompact, numberFormat, fY, fG, fR, bright } = require('./utils.js')
+const { interval, proxy, proxiesType, proxiesfile, debug, codesfile, bURL, params } = require('./config.json').checker
 
-const interval = 100 // 5req/min
-const proxy = true
-const proxiesType = 'http' // http, https, socks4, socks5
-const proxiesfile = './proxies/proxies.txt'
-const debug = true
-const codesfile = './codes/codes.txt'
-
-const bURL = 'https://discordapp.com/api/v8/entitlements/gift-codes/'
-const params = '?with_application=false&with_subscription_plan=true'
 const codes = fs.readFileSync(codesfile, { encoding: 'utf-8' }).split('\n').filter(c => c)
 const failed = []
 const valids = []
@@ -70,7 +62,7 @@ function dbug(str) {
     }
 }
 
-if (debug) setInterval(() => {
+if (debug && proxy) setInterval(() => {
     dbug(fY(`\n\nProxies up : ${numberFormat(proxies.filter(p => p.working && p.readyAt <= Date.now()).length)}\nProxies alive : ${numberFormat(proxies.filter(p => p.working).length)}\n\n`))
     pauseDBUG = 3000
 }, 10000);
@@ -81,13 +73,22 @@ class Proxy {
      * @param {String} proxy ip:port of the proxy
      */
     constructor(proxy, id) {
-        this.proxy = proxy
-        this.URI = `${proxiesType}://${this.proxy}`
-        this.id = id == undefined ? this.proxy.split('').reduce((acc, v) => acc+v.charCodeAt(0), 0) : id
-        this.ready = true
-        this.readyAt = Date.now()
-        this.uses = 0
-        this.working = true
+        if (proxy) {
+            this.proxy = proxy
+            this.URI = `${proxiesType}://${this.proxy}`
+            this.id = id == undefined ? this.proxy.split('').reduce((acc, v) => acc+v.charCodeAt(0), 0) : id
+            this.ready = true
+            this.readyAt = Date.now()
+            this.uses = 0
+            this.working = true
+        } else if (proxy == null) {
+            this.proxy = null
+            this.id = id || -1
+            this.ready = true
+            this.readyAt = Date.now()
+            this.uses = 0
+            this.working = true
+        }
     }
 
     /**
@@ -96,16 +97,17 @@ class Proxy {
      */
     async check(url, code) {
 
-        if (!this.ready) return null
+        if (!this.ready) return {
+            checked: null,
+            valid: null
+        }
 
         this.used(1)
         this.debug(fY(`Checking ${code}...`))
 
         try {
 
-            if (!this.proxy) return await check(url)
-
-            const body = await (await fetch(url, { agent: new ProxyAgent(this.URI), headers: { 'User-Agent': 'unknown' } })).json()
+            const body = await (await fetch(url, this.proxy ? { agent: new ProxyAgent(this.URI), headers: { 'User-Agent': 'unknown' } } : {} )).json()
 
             if (body?.redeemed == false && new Date(body?.expires_at) > Date.now()) {
                 valids.push(code)
@@ -181,7 +183,7 @@ class Proxy {
         if (this.working) dbug(`${fY(`{${this.id}}`)} ${str}`)
     }
 }
-const proxies = proxy ? fs.readFileSync(proxiesfile, { encoding: 'utf-8' }).split('\n').filter(p => p).map((proxy, i) => new Proxy(proxy, i)) : null
+const proxies = proxy ? fs.readFileSync(proxiesfile, { encoding: 'utf-8' }).split('\n').filter(p => p).map((proxy, i) => new Proxy(proxy, i)) : []
 
 async function main() {
     
@@ -220,6 +222,8 @@ async function main() {
 
 }
 
+const localProxy = new Proxy(null)
+
 async function tryCode() {
 
     let code = codes.shift()
@@ -235,11 +239,16 @@ async function tryCode() {
     if (proxy && !prox) {
         failed.push(code)
         let next = proxies.sort((a,b) => a.readyAt-b.readyAt).filter(p => p.working)[0]
-        dbug(fR(`No more proxy available | Nex ready in ${duration(next.readyAt-Date.now(), true, true)}.`))
+        dbug(fR(`No more proxy available | Next ready in ${duration(next.readyAt-Date.now(), true, true)}.`))
         return next.readyAt
     }
+    if (!proxy && !localProxy.ready) {
+        failed.push(code)
+        dbug(fR(`Rate-limited | Ready in ${duration(localProxy.readyAt-Date.now(), true, true)}.`))
+        return localProxy.readyAt
+    }
 
-    const r = proxy ? await prox.check(fullURL, codeOK) : await check(fullURL, codeOK)
+    const r = proxy ? await prox.check(fullURL, codeOK) : await localProxy.check(fullURL, codeOK)
 
     if (!r.checked) failed.push(code)
     else {
@@ -248,54 +257,6 @@ async function tryCode() {
     }
     return true
 
-}
-
-/**
- * Checks for an URL of Nitro Gift Code, no proxy.
- * @param {String} url 
- */
-async function check(url, code) {
-
-    dbug(fY(`Checking ${code}...`))
-
-    try {
-        const body = await (await fetch(url)).json()
-        if (body?.redeemed == false && new Date(body?.expires_at) > Date.now()) {
-            dbug(fG(`Check succeed, code : ${code}.`))
-            return {
-                checked: true,
-                valid: true
-            }
-        } else {
-            if (body.message == 'Unknown Gift Code') {
-                dbug(fR(`Check failed (404)`))
-                return {
-                    checked: true,
-                    valid: false
-                }
-            } else if (body.message == 'You are being rate limited.') {
-                dbug(fR(`Check failed (429), waiting ${numberFormat(body.retry_after*1000)}ms.`))
-                await wait(body.retry_after*1000)
-                return {
-                    checked: false,
-                    valid: null
-                }
-            } else {
-                dbug(fR(bright(`Unknow message (${body})`)))
-                return {
-                    checked: null,
-                    valid: null
-                }
-            }
-        } 
-    } catch(e) {
-        dbug(fR(`Fetch failed (${e})`))
-        return {
-            checked: false,
-            valid: null
-        }
-    }
-    
 }
 
 function end(end) {
