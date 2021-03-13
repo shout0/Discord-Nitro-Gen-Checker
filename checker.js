@@ -188,7 +188,7 @@ const proxies = proxy ? fs.readFileSync(proxiesfile, { encoding: 'utf-8' }).spli
 async function main() {
     
     const dura = () => proxies.length ? codes.length/interval : codes.length/5*60000
-    dbug(fG(`Lauching ${codes.length} checks, estimated time : ${duration(dura(), true, true)} | ${datetocompact(dura()+Date.now())}`))
+    console.info(fG(`Lauching ${codes.length} checks, estimated time : ${duration(dura(), true, true)} | ${datetocompact(dura()+Date.now())}`))
 
     while (c < max) {
 
@@ -213,7 +213,7 @@ async function main() {
 
         })
 
-        dbug(`Checked ${fG(`${numberFormat(c)}/${numberFormat(max)}`)} (${fG(valids.length)}), ${numberFormat(codes.length)} code(s) remaining (≈ ${duration(codes.length/5*60000, true, true)}).`)
+        console.log(`Checked ${fG(`${numberFormat(c)}/${numberFormat(max)}`)} (${fG(valids.length)}), ${numberFormat(codes.length)} code(s) remaining (≈ ${duration(codes.length/5*60000, true, true)}).`)
         
         pause ? await wait(pauseMs) : await wait(interval)
     }
@@ -284,7 +284,7 @@ function end(end) {
     writeStream.write(proxies.filter(p => p.working).map(p => p.proxy).join('\n'))
     writeStream.close()
 
-    dbug(fG(`End of check, ${numberFormat(c)} checked, ${numberFormat(valids.length)} valid ; took ${duration(end-start, true, true)}.`))
+    console.info(fG(`End of check, ${numberFormat(c)} checked, ${numberFormat(valids.length)} valid ; took ${duration(end-start, true, true)}.`))
     pauseDBUG = 60000
 
 }
