@@ -13,11 +13,11 @@ if (outfile) if (fs.existsSync(outfile)) fs.unlinkSync(outfile)
 const main = async () => {
 
     const start = performance.now()
-    if (debug) console.log(`[DEBUG] Starting generation...`)
+    console.log(`Starting generation...`)
 
     if (random) {
         
-        if (debug) console.log(`[DEBUG] Generating ${amount} codes of length ${length}.`)
+        console.log(`Generating ${amount} codes of length ${length}.`)
 
         for (let n = 0; n < amount; n++) {
             let str = ''
@@ -31,7 +31,7 @@ const main = async () => {
 
         const nmax = E.length**length
 
-        if (debug) console.log(`[DEBUG] Generating ${numberFormat(nmax)} codes of length ${length}.`)
+        console.log(`Generating ${numberFormat(nmax)} codes of length ${length}.`)
 
         let state = Array(length).fill(0)
 
@@ -67,7 +67,7 @@ const main = async () => {
         writeStream.write(codes.join('\n'))
         writeStream.close()
     }
-    if (debug) console.info(`[DEBUG] End of generation, ${codes.length} code(s) created ; took ${duration(end-start, true, true)}.`)
+    console.info(`End of generation, ${codes.length} code(s) created ; took ${duration(end-start, true, true)}.`)
 
 }
 
