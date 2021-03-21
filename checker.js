@@ -63,7 +63,7 @@ function dbug(str) {
 }
 
 if (debug && proxy) setInterval(() => {
-    dbug(fY(`\n\nProxies up : ${numberFormat(proxies.filter(p => p.working && p.readyAt <= Date.now()).length)}\nProxies alive : ${numberFormat(proxies.filter(p => p.working).length)}\n\n`))
+    dbug(fY(`\n\nProxies up : ${numberFormat(proxies.filter(p => p.working && p.readyAt <= Date.now()).length)}\nProxies alive : ${numberFormat(proxies.filter(p => p.working).length)}\nProxies dead : ${numberFormat(proxies.filter(p => !p.working).length)}\n\n`))
     pauseDBUG = 3000
 }, 10000);
 
@@ -111,7 +111,7 @@ class Proxy {
 
             if (body?.redeemed == false && new Date(body?.expires_at) > Date.now()) {
                 valids.push(code)
-                this.debug(fG(`{${this.id}} Check succeed, code : ${code}.`))
+                console.log(fG(`{${this.id}} Check succeed, code : ${code}.`))
                 return {
                     checked: true,
                     valid: true
@@ -185,6 +185,17 @@ class Proxy {
 }
 const proxies = proxy ? fs.readFileSync(proxiesfile, { encoding: 'utf-8' }).split('\n').filter(p => p).map((proxy, i) => new Proxy(proxy, i)) : []
 
+async function grabProxies() {
+
+    await fetch("https://api.proxyscrape.com/?request=displayproxies&proxytype=http&timeout=10000&country=all&anonymity=all&ssl=yes").then(async (res) => {
+        const body = await res.text()
+        for (let line of body.split('\n')) {
+            proxies.push(new Proxy(line, (proxies[proxies.length-1]?.id || 0)+1))
+        }
+    });
+
+}
+
 async function main() {
     
     const dura = () => proxies.length ? codes.length/interval : codes.length/5*60000
@@ -213,7 +224,7 @@ async function main() {
 
         })
 
-        console.log(`Checked ${fG(`${numberFormat(c)}/${numberFormat(max)}`)} (${fG(valids.length)}), ${numberFormat(codes.length)} code(s) remaining (≈ ${duration(codes.length/5*60000, true, true)}).`)
+        console.log(`Checked ${fG(`${numberFormat(c)}/${numberFormat(max)}`)} (${fG(valids.length)}), ${numberFormat(codes.length+failed.length)} code(s) remaining (≈ ${duration(codes.length/5*60000, true, true)}).`)
         
         pause ? await wait(pauseMs) : await wait(interval)
     }
@@ -235,11 +246,14 @@ async function tryCode() {
 
     let fullURL = `${bURL}${codeOK}${params}`
 
+    if (!proxies.length) await grabProxies()
+
     const prox = proxies.sort((a,b) => a.uses-b.uses).filter(p => p.working && p.ready)[0]
     if (proxy && !prox) {
         failed.push(code)
         let next = proxies.sort((a,b) => a.readyAt-b.readyAt).filter(p => p.working)[0]
         dbug(fR(`No more proxy available | Next ready in ${duration(next.readyAt-Date.now(), true, true)}.`))
+        grabProxies()
         return next.readyAt
     }
     if (!proxy && !localProxy.ready) {
