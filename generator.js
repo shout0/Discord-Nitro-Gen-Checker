@@ -65,7 +65,7 @@ const main = async () => {
     const end = performance.now()
 
     if (outfile) {
-        mkdirp(outFile)
+        await mkdirp(outFile)
         const writeStream = fs.createWriteStream(outFile, { encoding: 'utf-8' })
         writeStream.write(codes.join('\n'))
         writeStream.close()

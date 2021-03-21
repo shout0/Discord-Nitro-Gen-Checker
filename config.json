@@ -4,9 +4,9 @@
         "proxy": true,
         "autoGrabProxies": true,
         "proxiesType": "http" ,
-        "proxiesfile": "./proxies/proxies.txt",
+        "proxiesfile": "/proxies/proxies.txt",
         "debug": false,
-        "codesfile": "./codes/codes.txt",
+        "codesfile": "/codes/codes.txt",
 
         "bURL": "https://discordapp.com/api/v8/entitlements/gift-codes/",
         "params": "?with_application=false&with_subscription_plan=true"
@@ -18,6 +18,6 @@
         "random": true,
         "amount": 10000,
         "debug": true,
-        "outfile": "./codes/codes.txt"
+        "outfile": "/codes/codes.txt"
     }
 }

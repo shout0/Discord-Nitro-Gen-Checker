@@ -6,7 +6,7 @@ const { performance } = require('perf_hooks')
 const { wait, duration, datetocompact, numberFormat, fY, fG, fR, bright } = require('./utils.js')
 const { interval, proxy, proxiesType, proxiesfile, debug, codesfile, bURL, params } = require('./config.json').checker
 
-const codes = fs.readFileSync(codesfile, { encoding: 'utf-8' }).split('\n').filter(c => c)
+const codes = fs.readFileSync(__dirname+codesfile, { encoding: 'utf-8' }).split('\n').filter(c => c)
 const failed = []
 const valids = []
 let max = codes.length
@@ -184,7 +184,7 @@ class Proxy {
         if (this.working) dbug(`${fY(`{${this.id}}`)} ${str}`)
     }
 }
-const proxies = proxy ? fs.readFileSync(proxiesfile, { encoding: 'utf-8' }).split('\n').filter(p => p).map((proxy, i) => new Proxy(proxy, i)) : []
+const proxies = proxy ? fs.readFileSync(__dirname+proxiesfile, { encoding: 'utf-8' }).split('\n').filter(p => p).map((proxy, i) => new Proxy(proxy, i)) : []
 
 async function grabProxies() {
 
