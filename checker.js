@@ -184,6 +184,10 @@ class Proxy {
         if (this.working) dbug(`${fY(`{${this.id}}`)} ${str}`)
     }
 }
+if (proxy) {
+    mkdirp.sync(__dirname+proxiesfile.match(/.*\//g)[0])
+    fs.closeSync(fs.openSync(__dirname+proxiesfile, 'w'))
+}
 const proxies = proxy ? fs.readFileSync(__dirname+proxiesfile, { encoding: 'utf-8' }).split('\n').filter(p => p).map((proxy, i) => new Proxy(proxy, i)) : []
 
 async function grabProxies() {
