@@ -1,4 +1,5 @@
 const fetch = require('node-fetch');
+const mkdirp = require('mkdirp')
 const ProxyAgent = require('proxy-agent');
 const fs = require('fs')
 const { performance } = require('perf_hooks')
@@ -279,22 +280,28 @@ function end(end) {
     pause = true
 
     let validsTxt = ''
-    if (fs.existsSync('./codes/valids.txt')) {
-        validsTxt = fs.readFileSync('./codes/valids.txt', { encoding: 'utf-8' })
-        fs.unlinkSync('./codes/valids.txt')
+    let validsFile = __dirname+'./codes/valids.txt'
+    await mkdirp(validsFile)
+    if (fs.existsSync(validsFile)) {
+        validsTxt = fs.readFileSync(validsFile, { encoding: 'utf-8' })
+        fs.unlinkSync(validsFile)
     }
-    let writeStream = fs.createWriteStream('./codes/valids.txt', { encoding: 'utf-8' })
+    let writeStream = fs.createWriteStream(validsFile, { encoding: 'utf-8' })
     writeStream.write(validsTxt+valids.join('\n'))
     writeStream.close()
 
-    if (fs.existsSync(codesfile)) fs.unlinkSync(codesfile) //overwrite codes
-    writeStream = fs.createWriteStream(codesfile, { encoding: 'utf-8' })
+    let codesFile = __dirname+codesfile
+    await mkdirp(codesFile)
+    if (fs.existsSync(codesFile)) fs.unlinkSync(codesFile) //overwrite codes
+    writeStream = fs.createWriteStream(codesFile, { encoding: 'utf-8' })
     if (failed.length) codes.push(...failed)
     writeStream.write(codes.join('\n'))
     writeStream.close()
 
-    if (fs.existsSync(proxiesfile)) fs.unlinkSync(proxiesfile) //overwrite codes
-    writeStream = fs.createWriteStream(proxiesfile, { encoding: 'utf-8' })
+    let proxiesFile = __dirname+proxiesfile
+    await mkdirp(proxiesFile)
+    if (fs.existsSync()) fs.unlinkSync(proxiesFile) //overwrite codes
+    writeStream = fs.createWriteStream(proxiesFile, { encoding: 'utf-8' })
     writeStream.write(proxies.filter(p => p.working).map(p => p.proxy).join('\n'))
     writeStream.close()
 

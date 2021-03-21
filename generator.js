@@ -1,14 +1,16 @@
 const fs = require('fs')
+const mkdirp = require('mkdirp')
 const { performance } = require('perf_hooks')
 const { rand, duration, numberFormat } = require('./utils.js')
 const { prefix, suffix, length, random, amount, debug, outfile } = require('./config.json').generator
+let outFile = __dirname+outfile
 
 const E = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789' //62
 const max = E.length-1
 
 const codes = []
 
-if (outfile) if (fs.existsSync(outfile)) fs.unlinkSync(outfile)
+if (outFile) if (fs.existsSync(outFile)) fs.unlinkSync(outFile)
 
 const main = async () => {
 
@@ -63,7 +65,8 @@ const main = async () => {
     const end = performance.now()
 
     if (outfile) {
-        const writeStream = fs.createWriteStream(outfile, { encoding: 'utf-8' })
+        mkdirp(outFile)
+        const writeStream = fs.createWriteStream(outFile, { encoding: 'utf-8' })
         writeStream.write(codes.join('\n'))
         writeStream.close()
     }
