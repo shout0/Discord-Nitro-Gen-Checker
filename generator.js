@@ -31,13 +31,13 @@ const main = async () => {
 
     } else {
 
-        const nmax = E.length**length
+        const nmax = random ? E.length**length : amount
 
         console.log(`Generating ${numberFormat(nmax)} codes of length ${length}.`)
 
         let state = Array(length).fill(0)
 
-        while (true) {
+        while (true && codes.length < nmax) {
 
             str = ''
             for (let i = 0; i < length; i ++) {
