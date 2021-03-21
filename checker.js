@@ -281,7 +281,7 @@ function end(end) {
 
     let validsTxt = ''
     let validsFile = __dirname+'./codes/valids.txt'
-    await mkdirp(validsFile)
+    await mkdirp(validsFile.match(/.*\//g)[0])
     if (fs.existsSync(validsFile)) {
         validsTxt = fs.readFileSync(validsFile, { encoding: 'utf-8' })
         fs.unlinkSync(validsFile)
@@ -291,7 +291,7 @@ function end(end) {
     writeStream.close()
 
     let codesFile = __dirname+codesfile
-    await mkdirp(codesFile)
+    await mkdirp(codesFile.match(/.*\//g)[0])
     if (fs.existsSync(codesFile)) fs.unlinkSync(codesFile) //overwrite codes
     writeStream = fs.createWriteStream(codesFile, { encoding: 'utf-8' })
     if (failed.length) codes.push(...failed)
@@ -299,7 +299,7 @@ function end(end) {
     writeStream.close()
 
     let proxiesFile = __dirname+proxiesfile
-    await mkdirp(proxiesFile)
+    await mkdirp(proxiesFile.match(/.*\//g)[0])
     if (fs.existsSync()) fs.unlinkSync(proxiesFile) //overwrite codes
     writeStream = fs.createWriteStream(proxiesFile, { encoding: 'utf-8' })
     writeStream.write(proxies.filter(p => p.working).map(p => p.proxy).join('\n'))
