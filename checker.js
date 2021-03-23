@@ -253,7 +253,7 @@ async function tryCode() {
 
     let fullURL = `${bURL}${codeOK}${params}`
 
-    if (!proxies.length || proxies.filter(p => p.working).length < 10) await grabProxies()
+    if (!proxies.length || proxies.filter(p => p.working).length < 30) await grabProxies()
 
     const prox = proxies.sort((a,b) => a.uses-b.uses).filter(p => p.working && p.ready)[0]
     if (proxy && !prox) {
