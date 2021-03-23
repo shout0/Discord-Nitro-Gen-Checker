@@ -64,7 +64,7 @@ function dbug(str) {
 }
 
 if (proxy) setInterval(() => {
-    dbug(fY(`\n\nProxies up : ${numberFormat(proxies.filter(p => p.working && p.readyAt <= Date.now()).length)}\nProxies alive : ${numberFormat(proxies.filter(p => p.working).length)}\nProxies dead : ${numberFormat(proxies.filter(p => !p.working).length)}\n\n`))
+    console.log(fY(`\n\nProxies up : ${numberFormat(proxies.filter(p => p.working && p.readyAt <= Date.now()).length)}\nProxies alive : ${numberFormat(proxies.filter(p => p.working).length)}\nProxies dead : ${numberFormat(proxies.filter(p => !p.working).length)}\n\n`))
     pauseDBUG = 3000
 }, 10000);
 
