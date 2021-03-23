@@ -13,7 +13,7 @@ let max = codes.length
 let c = 0
 let pauseMs = interval
 let pause = false
-let pauseDBUG = 0
+let pauseLog = 0
 
 process.on("SIGINT", async () => {
     end(performance.now())
@@ -23,7 +23,7 @@ process.on("SIGINT", async () => {
     process.exit();
 });
 
-console.log(`                                            @@@@@@@@@                      
+log(`                                            @@@@@@@@@                      
                       /#@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#(   
             *@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@% .#        
        @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@.        &@@@@                   
@@ -53,19 +53,21 @@ console.log(`                                            @@@@@@@@@
             
             `)
 
+function log(str) {
+    if (pauseLog) setTimeout(() => {
+        pauseLog = 0
+        console.log(str)
+    }, pauseLog);
+    else console.log(str)
+}
+
 function dbug(str) {
-    if (debug) {
-        if (pauseDBUG) setTimeout(() => {
-            pauseDBUG = 0
-            dbug(str)
-        }, pauseDBUG);
-        else console.log(`${fY('[DBUG]')} ${str}`)
-    }
+    if (debug) log(`${fY('[DBUG]')} ${str}`)
 }
 
 if (proxy) setInterval(() => {
-    console.log(fY(`\n\nProxies up : ${numberFormat(proxies.filter(p => p.working && p.readyAt <= Date.now()).length)}\nProxies alive : ${numberFormat(proxies.filter(p => p.working).length)}\nProxies dead : ${numberFormat(proxies.filter(p => !p.working).length)}\n\n`))
-    pauseDBUG = 3000
+    log(fY(`\n\nProxies up : ${numberFormat(proxies.filter(p => p.working && p.readyAt <= Date.now()).length)}\nProxies alive : ${numberFormat(proxies.filter(p => p.working).length)}\nProxies dead : ${numberFormat(proxies.filter(p => !p.working).length)}\n\n`))
+    pauseLog = 3000
 }, 10000);
 
 class Proxy {
@@ -112,7 +114,7 @@ class Proxy {
 
             if (body?.redeemed == false && new Date(body?.expires_at) > Date.now()) {
                 valids.push(code)
-                console.log(fG(`{${this.id}} Check succeed, code : ${code}.`))
+                log(fG(`{${this.id}} Check succeed, code : ${code}.`))
                 return {
                     checked: true,
                     valid: true
@@ -229,7 +231,7 @@ async function main() {
 
         })
 
-        console.log(`Checked ${fG(`${numberFormat(c)}/${numberFormat(max)}`)} (${fG(valids.length)}), ${numberFormat(codes.length+failed.length)} code(s) remaining (≈ ${duration(codes.length/5*60000, true, true)}).`)
+        log(`Checked ${fG(`${numberFormat(c)}/${numberFormat(max)}`)} (${fG(valids.length)}), ${numberFormat(codes.length+failed.length)} code(s) remaining (≈ ${duration(codes.length/5*60000, true, true)}).`)
         
         pause ? await wait(pauseMs) : await wait(interval)
     }
@@ -310,7 +312,7 @@ function end(end) {
     writeStream.close()
 
     console.info(fG(`End of check, ${numberFormat(c)} checked, ${numberFormat(valids.length)} valid ; took ${duration(end-start, true, true)}.`))
-    pauseDBUG = 60000
+    pauseLog = 60000
 
 }
 
