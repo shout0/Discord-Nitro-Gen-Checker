@@ -63,7 +63,7 @@ function dbug(str) {
     }
 }
 
-if (debug && proxy) setInterval(() => {
+if (proxy) setInterval(() => {
     dbug(fY(`\n\nProxies up : ${numberFormat(proxies.filter(p => p.working && p.readyAt <= Date.now()).length)}\nProxies alive : ${numberFormat(proxies.filter(p => p.working).length)}\nProxies dead : ${numberFormat(proxies.filter(p => !p.working).length)}\n\n`))
     pauseDBUG = 3000
 }, 10000);
@@ -251,7 +251,7 @@ async function tryCode() {
 
     let fullURL = `${bURL}${codeOK}${params}`
 
-    if (!proxies.length) await grabProxies()
+    if (!proxies.length || proxies.filter(p => p.working).length < 10) await grabProxies()
 
     const prox = proxies.sort((a,b) => a.uses-b.uses).filter(p => p.working && p.ready)[0]
     if (proxy && !prox) {
