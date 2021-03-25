@@ -233,7 +233,7 @@ async function main() {
 
         log(`Checked ${fG(`${numberFormat(c)}/${numberFormat(max)}`)} (${fG(valids.length)}), ${numberFormat(codes.length+failed.length)} code(s) remaining (≈ ${duration(codes.length/5*60000, true, true)}).`)
         
-        pause ? await wait(pauseMs) : await wait(interval)
+        await wait(pause ? pauseMs : interval)
     }
 
     end(performance.now())
