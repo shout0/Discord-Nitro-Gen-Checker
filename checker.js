@@ -54,11 +54,10 @@ log(`                                            @@@@@@@@@
             `)
 
 function log(str) {
-    if (pauseLog) setTimeout(() => {
+    setTimeout(() => {
         pauseLog = 0
         console.log(str)
     }, pauseLog);
-    else console.log(str)
 }
 
 function dbug(str) {
