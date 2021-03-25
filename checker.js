@@ -235,7 +235,7 @@ async function main() {
 
         })
 
-        log(`Checked ${fG(`${numberFormat(c)}`)}/${fY(`${numberFormat(max)}`)} (${fG(valids.length)}), ${numberFormat(codes.length+failed.length)} code(s) remaining (≈ ${duration(codes.length/5*60000, true, true)}).`)
+        log(`Checked ${fG(`${numberFormat(c)}`)}/${fY(`${numberFormat(max)}`)} (${fG(valids.length)}), ${numberFormat(codes.length+failed.length)} code(s) remaining (≈ ${duration(proxy ? codes.length/(5*proxies.filter(p => p.working && p.ready).length)*60000 : codes.length/5*60000, true, true)}).`)
         
         await wait(pause ? pauseMs : interval)
     }
