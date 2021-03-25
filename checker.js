@@ -159,6 +159,7 @@ class Proxy {
     used(n = 1, time = 60000) {
         this.uses += n
         if (this.uses >= 5) {
+            if (time > 60000) this.working = false
             this.ready = false
             this.readyAt = Date.now()+time
             this.rateLimited(time)
