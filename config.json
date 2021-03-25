@@ -1,6 +1,6 @@
 {
     "checker": {
-        "interval": 100,
+        "interval": 50,
         "proxy": true,
         "autoGrabProxies": true,
         "proxiesType": "http" ,
