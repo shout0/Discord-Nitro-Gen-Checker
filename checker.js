@@ -54,10 +54,11 @@ log(`                                            @@@@@@@@@
             `)
 
 function log(str) {
-    setTimeout(() => {
+    if (pauseLog) wait(pauseLog).then(() => {
         pauseLog = 0
-        console.log(str)
-    }, pauseLog);
+        log(str)
+    })
+    else console.log(str)
 }
 
 function dbug(str) {
@@ -65,8 +66,11 @@ function dbug(str) {
 }
 
 if (proxy) setInterval(() => {
-    log(fY(`\n\nProxies up : ${numberFormat(proxies.filter(p => p.working && p.readyAt <= Date.now()).length)}\nProxies alive : ${numberFormat(proxies.filter(p => p.working).length)}\nProxies dead : ${numberFormat(proxies.filter(p => !p.working).length)}\n\n`))
-    pauseLog = 3000
+    const up = numberFormat(proxies.filter(p => p.working && p.readyAt <= Date.now()).length)
+    const alive = numberFormat(proxies.filter(p => p.working).length)
+    const dead = numberFormat(proxies.filter(p => !p.working).length)
+    log(`\n\nProxies up : ${fG(up)}\nProxies alive : ${fY(alive)}\nProxies dead : ${fR(dead)}\n\n`)
+    pauseLog = 2500
 }, 10000);
 
 class Proxy {
@@ -231,7 +235,7 @@ async function main() {
 
         })
 
-        log(`Checked ${fG(`${numberFormat(c)}/${numberFormat(max)}`)} (${fG(valids.length)}), ${numberFormat(codes.length+failed.length)} code(s) remaining (≈ ${duration(codes.length/5*60000, true, true)}).`)
+        log(`Checked ${fG(`${numberFormat(c)}`)}/${fY(`${numberFormat(max)}`)} (${fG(valids.length)}), ${numberFormat(codes.length+failed.length)} code(s) remaining (≈ ${duration(codes.length/5*60000, true, true)}).`)
         
         await wait(pause ? pauseMs : interval)
     }
