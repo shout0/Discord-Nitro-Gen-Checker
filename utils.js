@@ -49,7 +49,7 @@ module.exports = {
         let s = Math.round(ms / 1000)
         let ss = s > 1 ? 's' : ''
 
-        const r = `${positive}${y>0 ? `${y}${short ? 'a' : ` an${sy}`} ` : ''}${mo>0 ? `${mo}${short ? 'mo' : ` mois`} ` : ''}${d>0 ? `${d}${short ? 'j' : ` jour${sd}`} ` : ''}${h>0 ? `${h}${short ? 'h' : ` heure${sh}`} ` : ''}${mi>0 ? `${mi}${short ? 'm' : ` minute${smi}`} ` : ''}${s>0 && includeSec ? `${s}${short ? 's' : ` seconde${ss}`} ` : ''}`.replace(/ $/g, '')
+        const r = `${positive}${y>0 && y < Infinity ? `${y}${short ? 'a' : ` an${sy}`} ` : ''}${mo>0 ? `${mo}${short ? 'mo' : ` mois`} ` : ''}${d>0 ? `${d}${short ? 'j' : ` jour${sd}`} ` : ''}${h>0 ? `${h}${short ? 'h' : ` heure${sh}`} ` : ''}${mi>0 ? `${mi}${short ? 'm' : ` minute${smi}`} ` : ''}${s>0 && includeSec ? `${s}${short ? 's' : ` seconde${ss}`} ` : ''}`.replace(/ $/g, '')
 
         return r ? r : 'ø'
 
