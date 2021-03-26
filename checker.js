@@ -69,8 +69,9 @@ if (proxy) setInterval(() => {
     const up = numberFormat(proxies.filter(p => p.working && p.readyAt <= Date.now()).length)
     const alive = numberFormat(proxies.filter(p => p.working).length)
     const dead = numberFormat(proxies.filter(p => !p.working).length)
-    log(`\n\nProxies up : ${fG(up)}\nProxies alive : ${fY(alive)}\nProxies dead : ${fR(dead)}\n\n`)
+    log(`\n\nProxies up : ${fG(up)}\nProxies alive : ${fY(alive)}\nProxies dead : ${fR(dead)} (purging)\n\n`)
     pauseLog = 2500
+    proxies = proxies.filter(p => p.working)
 }, 10000);
 
 class Proxy {
