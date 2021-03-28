@@ -220,6 +220,7 @@ async function main() {
     console.info(fG(`Lauching ${max} checks, estimated time : ${duration(dura(), true, true)} | ${datetocompact(dura()+Date.now())}`))
 
     let d = 0
+    let prevC = c
 
     while (c < max) {
 
@@ -240,7 +241,7 @@ async function main() {
 
         })
 
-        log(`Checked ${fG(`${numberFormat(c)}`)}/${fY(`${numberFormat(max)}`)} (${fG(valids.length)}), ${numberFormat(max-c)} code(s) remaining (≈ ${duration(dura(), true, true)}).`)
+        if (prevC != c) log(`Checked ${fG(`${numberFormat(c)}`)}/${fY(`${numberFormat(max)}`)} (${fG(valids.length)}), ${numberFormat(max-c)} code(s) remaining (≈ ${duration(dura(), true, true)}).`), prevC = c
         
         await wait(pause ? pauseMs : interval)
     }
