@@ -19,7 +19,7 @@ Very easy :
     - Open the config file : `nano config.json`.
     - Edit as wanted, properties are explicit, then save and close.
 5. (Optional) Run `node generator.js` to generate codes, or append somes to a file named `codes/codes.txt`.
-6. Run `node checked.js` to start massively checking codes.
+6. Run `node checker.js [number of codes to check]` to start massively checking codes.
 
 ## Support 🖐
 In case of bug, just open an [issue](https://github.com/Catatomik/Discord-Nitro-Gen-Checker/issues/new/choose).
