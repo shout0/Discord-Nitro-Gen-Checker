@@ -61,9 +61,13 @@ function dbug(str) {
 }
 
 async function actualizeCodes(n)  { 
+    dbug(`Cleaning codes...`)
     let newCodes = codes.filter(c => !c.checked && !c.valid)
+    dbug(`${fY(codes.length-newCodes.length)} codes cleared.`)
+    dbug(`Adding ${fY(n)} more codes...`)
     const r = await generator(prefix, suffix, length, random, n)
     newCodes.push(...r.codes.map(c => { return { code: c, checked: false, valid: null } }))
+    log(`Added ${fY(n)} more codes.`)
     return newCodes
 }
 
@@ -205,9 +209,12 @@ if (proxy) {
 
 async function grabProxies() {
 
+    dbug("Autograbbing proxies...")
     await fetch("https://api.proxyscrape.com/?request=displayproxies&proxytype=http&timeout=10000&country=all&anonymity=all&ssl=yes").then(async (res) => {
         const body = await res.text()
-        for (let line of body.split('\n')) {
+        const lines = body.split('\n')
+        log(`Automatically grabbed ${fY(lines.length)} proxies.`)
+        for (let line of lines) {
             proxies.push(new Proxy(line, (proxies[proxies.length-1]?.id || 0)+1))
         }
     });
