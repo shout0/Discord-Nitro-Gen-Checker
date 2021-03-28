@@ -203,10 +203,12 @@ class Proxy {
  * @type {Array<Proxy>}
  */
 let proxies = []
+const localProxy = new Proxy(null)
 if (proxy) {
     mkdirp.sync(proxiesfile.match(/.*(\/|\\)/g)[0])
     if (!fs.existsSync(proxiesfile)) fs.closeSync(fs.openSync(proxiesfile, 'w')), grabProxies()
     proxies = fs.readFileSync(proxiesfile, { encoding: 'utf-8' }).split('\n').filter(p => p).map((proxy, i) => new Proxy(proxy, i))
+    proxies.push(localProxy)
 }
 
 async function grabProxies() {
@@ -261,8 +263,6 @@ async function main() {
     end(performance.now())
 
 }
-
-const localProxy = new Proxy(null)
 
 async function tryCode() {
 
