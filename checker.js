@@ -192,7 +192,7 @@ class Proxy {
     }
 }
 if (proxy) {
-    mkdirp.sync(__dirname+proxiesfile.match(/.*\//g)[0])
+    mkdirp.sync(__dirname+proxiesfile.match(/.*(\/|\\)/g)[0])
     fs.closeSync(fs.openSync(__dirname+proxiesfile, 'w'))
 }
 let proxies = proxy ? fs.readFileSync(__dirname+proxiesfile, { encoding: 'utf-8' }).split('\n').filter(p => p).map((proxy, i) => new Proxy(proxy, i)) : []
@@ -290,9 +290,11 @@ function end(end) {
     pauseMs = 60000
     pause = true
 
+    let codesFile = __dirname+codesfile
     let validsTxt = ''
-    let validsFile = __dirname+'./codes/valids.txt'
-    mkdirp.sync(validsFile.match(/.*\//g)[0])
+    let validsFile = __dirname+codesFile.match(/.*(\/|\\)/g)[0]+'valids.txt'
+    console.log(validsFile.match(/.*(\/|\\)/g)[0])
+    mkdirp.sync(validsFile.match(/.*(\/|\\)/g)[0])
     if (fs.existsSync(validsFile)) {
         validsTxt = fs.readFileSync(validsFile, { encoding: 'utf-8' })
         fs.unlinkSync(validsFile)
@@ -301,8 +303,7 @@ function end(end) {
     writeStream.write(validsTxt+valids.join('\n'))
     writeStream.close()
 
-    let codesFile = __dirname+codesfile
-    mkdirp.sync(codesFile.match(/.*\//g)[0])
+    mkdirp.sync(codesFile.match(/.*(\/|\\)/g)[0])
     if (fs.existsSync(codesFile)) fs.unlinkSync(codesFile) //overwrite codes
     writeStream = fs.createWriteStream(codesFile, { encoding: 'utf-8' })
     if (failed.length) codes.push(...failed)
@@ -310,7 +311,7 @@ function end(end) {
     writeStream.close()
 
     let proxiesFile = __dirname+proxiesfile
-    mkdirp.sync(proxiesFile.match(/.*\//g)[0])
+    mkdirp.sync(proxiesFile.match(/.*(\/|\\)/g)[0])
     if (fs.existsSync()) fs.unlinkSync(proxiesFile) //overwrite codes
     writeStream = fs.createWriteStream(proxiesFile, { encoding: 'utf-8' })
     writeStream.write(proxies.filter(p => p.working).map(p => p.proxy).join('\n'))
