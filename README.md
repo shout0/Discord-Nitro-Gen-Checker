@@ -18,7 +18,7 @@ Very easy :
 4. Configure before lauching.
     - Open the config file : `nano config.json`.
     - Edit as wanted, properties are explicit, then save and close.
-5. Run `node generator.js` to generate codes, or append somes to a file named `codes/codes.txt`.
+5. (Optional) Run `node generator.js` to generate codes, or append somes to a file named `codes/codes.txt`.
 6. Run `node checked.js` to start massively checking codes.
 
 ## Support 🖐
