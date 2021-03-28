@@ -213,8 +213,11 @@ async function grabProxies() {
 
     dbug("Autograbbing proxies...")
     await fetch("https://api.proxyscrape.com/?request=displayproxies&proxytype=http&timeout=10000&country=all&anonymity=all&ssl=yes").then(async (res) => {
+        /**
+         * @type {String}
+         */
         const body = await res.text()
-        const lines = body.split('\n')
+        const lines = body.split('\n').filter(line => !proxies.find(p => p.proxy == line))
         log(`Automatically grabbed ${fY(lines.length)} proxies.`)
         for (let line of lines) {
             proxies.push(new Proxy(line, (proxies[proxies.length-1]?.id || 0)+1))
