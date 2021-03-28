@@ -64,10 +64,12 @@ async function actualizeCodes(n)  {
     dbug(`Cleaning codes...`)
     let newCodes = codes.filter(c => !c.checked && !c.valid)
     dbug(`${fY(codes.length-newCodes.length)} codes cleared.`)
-    dbug(`Adding ${fY(n)} more codes...`)
-    const r = await generator(prefix, suffix, length, random, n)
-    newCodes.push(...r.codes.map(c => { return { code: c, checked: false, valid: null } }))
-    log(`Added ${fY(n)} more codes.`)
+    if (n > 0) {
+        dbug(`Adding ${fY(n)} more codes...`)
+        const r = await generator(prefix, suffix, length, random, n)
+        newCodes.push(...r.codes.map(c => { return { code: c, checked: false, valid: null } }))
+        log(`Added ${fY(n)} more codes.`)
+    }
     return newCodes
 }
 
@@ -231,7 +233,7 @@ async function main() {
 
     while (c < max) {
 
-        if (!codes.find(c => !c.checked || c.checked == 'ongoing') || c-d > 100) codes = await actualizeCodes(max-c > 10000 ? 10000 : max-c), d = c
+        if (!codes.find(c => !c.checked || c.checked == 'ongoing') || c-d > 100) codes = await actualizeCodes(10000-codes.length+valids.length), d = c
 
         if (!proxy) {
 
