@@ -122,7 +122,7 @@ class Proxy {
 
         try {
 
-            const body = await (await fetch(url, this.proxy ? { agent: new ProxyAgent(this.URI), headers: { 'User-Agent': 'unknown' } } : {} )).json()
+            const body = await (await fetch(url, this.proxy ? { agent: new ProxyAgent(this.URI), headers: { 'User-Agent': 'unknown' } } : { headers: { 'User-Agent': 'unknown' } } )).json()
 
             if (body?.redeemed == false && new Date(body?.expires_at) > Date.now()) {
                 valids.push(code)
