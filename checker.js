@@ -11,7 +11,7 @@ const generator = require('./generator.js')
 let codes = fs.readFileSync(codesfile, { encoding: 'utf-8' }).split('\n').filter(c => c).map(c => { return { code: c, checked: false, valid: null } })
 const valids = []
 let c = 0
-const max = process.argv?.[2] || codes.length
+const max = Number(process.argv?.[2] || codes.length)
 let pauseMs = interval
 let pause = false
 let pauseLog = 0
