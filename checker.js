@@ -8,7 +8,6 @@ const { interval, proxy, proxiesType, proxiesfile, debug, codesfile, bURL, param
 
 const codes = fs.readFileSync(codesfile, { encoding: 'utf-8' }).split('\n').filter(c => c).map(c => { return { code: c, checked: false, valid: null } })
 const valids = []
-let max = codes.length
 let c = 0
 let pauseMs = interval
 let pause = false
