@@ -183,11 +183,12 @@ class Proxy {
         if (this.working) dbug(`${fY(`{${this.id}}`)} ${str}`)
     }
 }
+let proxies = []
 if (proxy) {
     mkdirp.sync(proxiesfile.match(/.*(\/|\\)/g)[0])
-    fs.closeSync(fs.openSync(proxiesfile, 'w'))
+    if (!fs.existsSync(proxiesfile)) fs.closeSync(fs.openSync(proxiesfile, 'w')), grabProxies()
+    proxies = fs.readFileSync(proxiesfile, { encoding: 'utf-8' }).split('\n').filter(p => p).map((proxy, i) => new Proxy(proxy, i))
 }
-let proxies = proxy ? fs.readFileSync(proxiesfile, { encoding: 'utf-8' }).split('\n').filter(p => p).map((proxy, i) => new Proxy(proxy, i)) : []
 
 async function grabProxies() {
 
@@ -203,6 +204,8 @@ async function grabProxies() {
 async function main() {
     
     const dura = () => proxy ? codes.filter(c => !c.checked).length/(5*proxies.filter(p => p.working && p.ready).length)*60000 : codes.filter(c => !c.checked).length/5*60000
+    console.log(codes.filter(c => !c.checked).length)
+    console.log(proxies.filter(p => p.working && p.ready).length)
     console.info(fG(`Lauching ${codes.length} checks, estimated time : ${duration(dura(), true, true)} | ${datetocompact(dura()+Date.now())}`))
 
     while (codes.find(c => !c.checked)) {
@@ -296,7 +299,7 @@ function end(end) {
     writeStream.write(proxies.filter(p => p.working).map(p => p.proxy).join('\n'))
     writeStream.close()
 
-    console.info(fG(`End of check, ${numberFormat(c)} checked, ${numberFormat(valids.length)} valid ; took ${duration(end-start, true, true)}.`))
+    console.info(fG(`End of check, ${numberFormat(codes.filter(c => c.checked).length)} checked, ${numberFormat(valids.length)} valid ; took ${duration(end-start, true, true)}.`))
     pauseLog = 60000
 
     wait(3000).then(() => process.exit())
