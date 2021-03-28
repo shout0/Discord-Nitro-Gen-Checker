@@ -6,8 +6,7 @@ const { performance } = require('perf_hooks')
 const { wait, duration, datetocompact, numberFormat, fY, fG, fR, bright } = require('./utils.js')
 const { interval, proxy, proxiesType, proxiesfile, debug, codesfile, bURL, params } = require('./config.json').checker
 
-const codes = fs.readFileSync(__dirname+codesfile, { encoding: 'utf-8' }).split('\n').filter(c => c)
-const failed = []
+const codes = fs.readFileSync(codesfile, { encoding: 'utf-8' }).split('\n').filter(c => c).map(c => { return { code: c, checked: false, valid: null } })
 const valids = []
 let max = codes.length
 let c = 0
@@ -15,13 +14,7 @@ let pauseMs = interval
 let pause = false
 let pauseLog = 0
 
-process.on("SIGINT", async () => {
-    end(performance.now())
-
-    await wait(3000)
-
-    process.exit();
-});
+process.on("SIGINT", () => end(performance.now()) );
 
 log(`                                            @@@@@@@@@                      
                       /#@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#(   
@@ -192,10 +185,10 @@ class Proxy {
     }
 }
 if (proxy) {
-    mkdirp.sync(__dirname+proxiesfile.match(/.*(\/|\\)/g)[0])
-    fs.closeSync(fs.openSync(__dirname+proxiesfile, 'w'))
+    mkdirp.sync(proxiesfile.match(/.*(\/|\\)/g)[0])
+    fs.closeSync(fs.openSync(proxiesfile, 'w'))
 }
-let proxies = proxy ? fs.readFileSync(__dirname+proxiesfile, { encoding: 'utf-8' }).split('\n').filter(p => p).map((proxy, i) => new Proxy(proxy, i)) : []
+let proxies = proxy ? fs.readFileSync(proxiesfile, { encoding: 'utf-8' }).split('\n').filter(p => p).map((proxy, i) => new Proxy(proxy, i)) : []
 
 async function grabProxies() {
 
@@ -210,16 +203,10 @@ async function grabProxies() {
 
 async function main() {
     
-    const dura = () => proxies.length ? codes.length/interval : codes.length/5*60000
+    const dura = () => proxy ? codes.filter(c => !c.checked).length/(5*proxies.filter(p => p.working && p.ready).length)*60000 : codes.filter(c => !c.checked).length/5*60000
     console.info(fG(`Lauching ${codes.length} checks, estimated time : ${duration(dura(), true, true)} | ${datetocompact(dura()+Date.now())}`))
 
-    while (c < max) {
-
-        if (codes.length == 0 && failed.length > 0) failed.forEach(_ => codes.push(failed.pop()))
-        else if (codes.length == 0) {
-            await wait(1000)
-            continue
-        }
+    while (codes.find(c => !c.checked)) {
 
         if (!proxy) {
 
@@ -236,7 +223,7 @@ async function main() {
 
         })
 
-        log(`Checked ${fG(`${numberFormat(c)}`)}/${fY(`${numberFormat(max)}`)} (${fG(valids.length)}), ${numberFormat(codes.length+failed.length)} code(s) remaining (≈ ${duration(proxy ? codes.length/(5*proxies.filter(p => p.working && p.ready).length)*60000 : codes.length/5*60000, true, true)}).`)
+        log(`Checked ${fG(`${numberFormat(codes.filter(c => c.checked).length)}`)}/${fY(`${numberFormat(codes.length)}`)} (${fG(valids.length)}), ${numberFormat(codes.filter(c => !c.checked).length)} code(s) remaining (≈ ${duration(dura(), true, true)}).`)
         
         await wait(pause ? pauseMs : interval)
     }
@@ -249,10 +236,12 @@ const localProxy = new Proxy(null)
 
 async function tryCode() {
 
-    let code = codes.shift()
+    let code = codes.find(c => !c.checked)
     if (!code) return
 
-    let matches = code.match(/[0-z]+/g)
+    code.checked = "ongoing"
+
+    let matches = code.code.match(/[0-z]+/g)
     if (!matches) return //ensure for matching nitro code
     let codeOK = matches[matches.length-1] //remove any previous '...discord.gift/' or trailing sh*t
 
@@ -262,25 +251,20 @@ async function tryCode() {
 
     const prox = proxies.sort((a,b) => a.uses-b.uses).filter(p => p.working && p.ready)[0]
     if (proxy && !prox) {
-        failed.push(code)
         let next = proxies.sort((a,b) => a.readyAt-b.readyAt).filter(p => p.working)[0]
         dbug(fR(`No more proxy available | Next ready in ${duration(next.readyAt-Date.now(), true, true)}.`))
         grabProxies()
         return next.readyAt
     }
     if (!proxy && !localProxy.ready) {
-        failed.push(code)
         dbug(fR(`Rate-limited | Ready in ${duration(localProxy.readyAt-Date.now(), true, true)}.`))
         return localProxy.readyAt
     }
 
     const r = proxy ? await prox.check(fullURL, codeOK) : await localProxy.check(fullURL, codeOK)
 
-    if (!r.checked) failed.push(code)
-    else {
-        c++
-        if (r.valid) valids.push(codeOK)
-    }
+    for (const k in r) code[k] = r[k]
+    if (r.valid) valids.push(codeOK)
     return true
 
 }
@@ -290,10 +274,8 @@ function end(end) {
     pauseMs = 60000
     pause = true
 
-    let codesFile = __dirname+codesfile
     let validsTxt = ''
-    let validsFile = __dirname+codesFile.match(/.*(\/|\\)/g)[0]+'valids.txt'
-    console.log(validsFile.match(/.*(\/|\\)/g)[0])
+    let validsFile = codesfile.match(/.*(\/|\\)/g)[0]+'valids.txt'
     mkdirp.sync(validsFile.match(/.*(\/|\\)/g)[0])
     if (fs.existsSync(validsFile)) {
         validsTxt = fs.readFileSync(validsFile, { encoding: 'utf-8' })
@@ -303,22 +285,22 @@ function end(end) {
     writeStream.write(validsTxt+valids.join('\n'))
     writeStream.close()
 
-    mkdirp.sync(codesFile.match(/.*(\/|\\)/g)[0])
-    if (fs.existsSync(codesFile)) fs.unlinkSync(codesFile) //overwrite codes
-    writeStream = fs.createWriteStream(codesFile, { encoding: 'utf-8' })
-    if (failed.length) codes.push(...failed)
-    writeStream.write(codes.join('\n'))
+    mkdirp.sync(codesfile.match(/.*(\/|\\)/g)[0])
+    if (fs.existsSync(codesfile)) fs.unlinkSync(codesfile) //overwrite codes
+    writeStream = fs.createWriteStream(codesfile, { encoding: 'utf-8' })
+    writeStream.write(codes.filter(c => !c.checked).map(c => c.code).join('\n'))
     writeStream.close()
 
-    let proxiesFile = __dirname+proxiesfile
-    mkdirp.sync(proxiesFile.match(/.*(\/|\\)/g)[0])
-    if (fs.existsSync()) fs.unlinkSync(proxiesFile) //overwrite codes
-    writeStream = fs.createWriteStream(proxiesFile, { encoding: 'utf-8' })
+    mkdirp.sync(proxiesfile.match(/.*(\/|\\)/g)[0])
+    if (fs.existsSync()) fs.unlinkSync(proxiesfile) //overwrite codes
+    writeStream = fs.createWriteStream(proxiesfile, { encoding: 'utf-8' })
     writeStream.write(proxies.filter(p => p.working).map(p => p.proxy).join('\n'))
     writeStream.close()
 
     console.info(fG(`End of check, ${numberFormat(c)} checked, ${numberFormat(valids.length)} valid ; took ${duration(end-start, true, true)}.`))
     pauseLog = 60000
+
+    wait(3000).then(() => process.exit())
 
 }
 
