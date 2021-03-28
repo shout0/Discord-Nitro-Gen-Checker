@@ -61,9 +61,9 @@ function dbug(str) {
 }
 
 async function actualizeCodes(n)  { 
-    dbug(`Cleaning codes...`)
+    dbug(`Purging codes...`)
     let newCodes = codes.filter(c => !c.checked && !c.valid)
-    dbug(`${fY(codes.length-newCodes.length)} codes cleared.`)
+    dbug(`${fY(codes.length-newCodes.length)} codes purged.`)
     if (n > 0) {
         dbug(`Adding ${fY(n)} more codes...`)
         const r = await generator(prefix, suffix, length, random, n)
