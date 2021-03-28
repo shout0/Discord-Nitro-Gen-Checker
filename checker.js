@@ -5,10 +5,13 @@ const fs = require('fs')
 const { performance } = require('perf_hooks')
 const { wait, duration, datetocompact, numberFormat, fY, fG, fR, bright } = require('./utils.js')
 const { interval, proxy, proxiesType, proxiesfile, debug, codesfile, bURL, params } = require('./config.json').checker
+const { prefix, suffix, length, random } = require('./config.json').generator
+const generator = require('./generator.js')
 
-const codes = fs.readFileSync(codesfile, { encoding: 'utf-8' }).split('\n').filter(c => c).map(c => { return { code: c, checked: false, valid: null } })
+let codes = fs.readFileSync(codesfile, { encoding: 'utf-8' }).split('\n').filter(c => c).map(c => { return { code: c, checked: false, valid: null } })
 const valids = []
 let c = 0
+const max = process.argv?.[2] || codes.length
 let pauseMs = interval
 let pause = false
 let pauseLog = 0
@@ -55,6 +58,13 @@ function log(str) {
 
 function dbug(str) {
     if (debug) log(`${fY('[DBUG]')} ${str}`)
+}
+
+async function actualizeCodes(n)  { 
+    let newCodes = codes.filter(c => !c.checked && !c.valid)
+    const r = await generator(prefix, suffix, length, random, n)
+    newCodes.push(...r.codes.map(c => { return { code: c, checked: false, valid: null } }))
+    return newCodes
 }
 
 if (proxy) setInterval(() => {
@@ -183,6 +193,9 @@ class Proxy {
         if (this.working) dbug(`${fY(`{${this.id}}`)} ${str}`)
     }
 }
+/**
+ * @type {Array<Proxy>}
+ */
 let proxies = []
 if (proxy) {
     mkdirp.sync(proxiesfile.match(/.*(\/|\\)/g)[0])
@@ -203,12 +216,14 @@ async function grabProxies() {
 
 async function main() {
     
-    const dura = () => proxy ? codes.filter(c => !c.checked).length/(5*proxies.filter(p => p.working && p.ready).length)*60000 : codes.filter(c => !c.checked).length/5*60000
-    console.log(codes.filter(c => !c.checked).length)
-    console.log(proxies.filter(p => p.working && p.ready).length)
-    console.info(fG(`Lauching ${codes.length} checks, estimated time : ${duration(dura(), true, true)} | ${datetocompact(dura()+Date.now())}`))
+    const dura = () => proxy ? (max-c)/(5*proxies.filter(p => p.working && p.ready).length)*60000 : (max-c).length/5*60000
+    console.info(fG(`Lauching ${max} checks, estimated time : ${duration(dura(), true, true)} | ${datetocompact(dura()+Date.now())}`))
 
-    while (codes.find(c => !c.checked)) {
+    let d = 0
+
+    while (c < max) {
+
+        if (!codes.find(c => !c.checked || c.checked == 'ongoing') || c-d > 100) codes = await actualizeCodes(max-c > 10000 ? 10000 : max-c), d = c
 
         if (!proxy) {
 
@@ -225,7 +240,7 @@ async function main() {
 
         })
 
-        log(`Checked ${fG(`${numberFormat(codes.filter(c => c.checked).length)}`)}/${fY(`${numberFormat(codes.length)}`)} (${fG(valids.length)}), ${numberFormat(codes.filter(c => !c.checked).length)} code(s) remaining (≈ ${duration(dura(), true, true)}).`)
+        log(`Checked ${fG(`${numberFormat(c)}`)}/${fY(`${numberFormat(max)}`)} (${fG(valids.length)}), ${numberFormat(max-c)} code(s) remaining (≈ ${duration(dura(), true, true)}).`)
         
         await wait(pause ? pauseMs : interval)
     }
@@ -266,6 +281,7 @@ async function tryCode() {
     const r = proxy ? await prox.check(fullURL, codeOK) : await localProxy.check(fullURL, codeOK)
 
     for (const k in r) code[k] = r[k]
+    if (r.checked) c++
     if (r.valid) valids.push(codeOK)
     return true
 
@@ -275,6 +291,7 @@ function end(end) {
 
     pauseMs = 60000
     pause = true
+    pauseLog = 60000
 
     let validsTxt = ''
     let validsFile = codesfile.match(/.*(\/|\\)/g)[0]+'valids.txt'
@@ -299,10 +316,9 @@ function end(end) {
     writeStream.write(proxies.filter(p => p.working).map(p => p.proxy).join('\n'))
     writeStream.close()
 
-    console.info(fG(`End of check, ${numberFormat(codes.filter(c => c.checked).length)} checked, ${numberFormat(valids.length)} valid ; took ${duration(end-start, true, true)}.`))
-    pauseLog = 60000
+    console.info(fG(`End of check, ${numberFormat(c)} checked, ${numberFormat(valids.length)} valid ; took ${duration(end-start, true, true)}.`))
 
-    wait(3000).then(() => process.exit())
+    wait(2000).then(() => process.exit())
 
 }
 
