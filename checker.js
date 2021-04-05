@@ -15,6 +15,7 @@ const max = Number(process.argv?.[2] || codes.length)
 let pauseMs = interval
 let pause = false
 let pauseLog = 0
+let lastGrab = 0
 
 process.on("SIGINT", () => end(performance.now()) );
 
@@ -60,7 +61,11 @@ function dbug(str) {
     if (debug) log(`${fY('[DBUG]')} ${str}`)
 }
 
-async function actualizeCodes(n)  { 
+async function actualizeCodes(n)  {
+    if (Date.now()-lastGrab > 10000) {
+        await wait(1000)
+        return codes
+    }
     dbug(`Purging codes...`)
     let newCodes = codes.filter(c => !c.checked && !c.valid)
     dbug(`${fY(codes.length-newCodes.length)} codes purged.`)
@@ -68,6 +73,7 @@ async function actualizeCodes(n)  {
         dbug(`Adding ${fY(n)} more codes...`)
         const r = await generator(prefix, suffix, length, random, n)
         newCodes.push(...r.codes.map(c => { return { code: c, checked: false, valid: null } }))
+        lastGrab = Date.now()
         log(`Added ${fY(n)} more codes.`)
     }
     return newCodes
@@ -125,8 +131,7 @@ class Proxy {
             const body = await (await fetch(url, this.proxy ? { agent: new ProxyAgent(this.URI), headers: { 'User-Agent': 'unknown' } } : { headers: { 'User-Agent': 'unknown' } } )).json()
 
             if (body?.redeemed == false && new Date(body?.expires_at) > Date.now()) {
-                valids.push(code)
-                log(fG(`{${this.id}} Check succeed, code : ${code}.`))
+                log(fG(`[HIT] Check succeed, code : ${code}.`))
                 return {
                     checked: true,
                     valid: true
@@ -140,7 +145,7 @@ class Proxy {
                     }
                 } else if (body.message == 'You are being rate limited.') {
                     let int = body.retry_after*1000
-                    this.debug(fR(`Check failed (429), waiting ${numberFormat(int)}ms.`))
+                    this.debug(fR(`Check missed (429), waiting ${numberFormat(int)}ms.`))
                     this.used(5, int)
                     return {
                         checked: false,
@@ -155,8 +160,8 @@ class Proxy {
                 }
             } 
         } catch(e) {
-            this.debug(fR(`Fetch failed (${e})`))
-            if (!e.toString().includes('timed out')) this.working = false
+            this.debug(fR(`Fetch missed (${e})`))
+            if (!e.toString().toLowerCase().replace(/ +/g, '').includes('timedout')) this.working = false
             return {
                 checked: false,
                 valid: null
@@ -238,7 +243,15 @@ async function main() {
 
     while (c < max) {
 
-        if (!codes.find(c => !c.checked || c.checked == 'ongoing') || c-d > 100) codes = await actualizeCodes(10000-codes.length+valids.length), d = c
+        if ((!codes.find(c => !c.checked || c.checked == 'ongoing') || c-d > 100) && !pause) {
+            pauseMs = 1000
+            pause = true
+            const ongoing = codes.filter(c => c.checked == 'ongoing')
+            codes = await actualizeCodes(10000-ongoing.length+valids.length)
+            codes.push(...ongoing)
+            d = c
+            pause = false
+        }
 
         if (!proxy) {
 
