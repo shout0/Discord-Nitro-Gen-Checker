@@ -11,7 +11,7 @@ const generator = require('./generator.js')
 let codes = fs.readFileSync(codesfile, { encoding: 'utf-8' }).split('\n').filter(c => c).map(c => { return { code: c, checked: false, valid: null } })
 const valids = []
 let c = 0
-const max = process.argv?.[2] || codes.length
+const max = Number(process.argv?.[2] || codes.length)
 let pauseMs = interval
 let pause = false
 let pauseLog = 0
@@ -61,9 +61,15 @@ function dbug(str) {
 }
 
 async function actualizeCodes(n)  { 
+    dbug(`Purging codes...`)
     let newCodes = codes.filter(c => !c.checked && !c.valid)
-    const r = await generator(prefix, suffix, length, random, n)
-    newCodes.push(...r.codes.map(c => { return { code: c, checked: false, valid: null } }))
+    dbug(`${fY(codes.length-newCodes.length)} codes purged.`)
+    if (n > 0) {
+        dbug(`Adding ${fY(n)} more codes...`)
+        const r = await generator(prefix, suffix, length, random, n)
+        newCodes.push(...r.codes.map(c => { return { code: c, checked: false, valid: null } }))
+        log(`Added ${fY(n)} more codes.`)
+    }
     return newCodes
 }
 
@@ -116,7 +122,7 @@ class Proxy {
 
         try {
 
-            const body = await (await fetch(url, this.proxy ? { agent: new ProxyAgent(this.URI), headers: { 'User-Agent': 'unknown' } } : {} )).json()
+            const body = await (await fetch(url, this.proxy ? { agent: new ProxyAgent(this.URI), headers: { 'User-Agent': 'unknown' } } : { headers: { 'User-Agent': 'unknown' } } )).json()
 
             if (body?.redeemed == false && new Date(body?.expires_at) > Date.now()) {
                 valids.push(code)
@@ -197,17 +203,25 @@ class Proxy {
  * @type {Array<Proxy>}
  */
 let proxies = []
+const localProxy = new Proxy(null)
 if (proxy) {
     mkdirp.sync(proxiesfile.match(/.*(\/|\\)/g)[0])
     if (!fs.existsSync(proxiesfile)) fs.closeSync(fs.openSync(proxiesfile, 'w')), grabProxies()
     proxies = fs.readFileSync(proxiesfile, { encoding: 'utf-8' }).split('\n').filter(p => p).map((proxy, i) => new Proxy(proxy, i))
+    proxies.push(localProxy)
 }
 
 async function grabProxies() {
 
+    dbug("Autograbbing proxies...")
     await fetch("https://api.proxyscrape.com/?request=displayproxies&proxytype=http&timeout=10000&country=all&anonymity=all&ssl=yes").then(async (res) => {
+        /**
+         * @type {String}
+         */
         const body = await res.text()
-        for (let line of body.split('\n')) {
+        const lines = body.split('\n').filter(line => !proxies.find(p => p.proxy == line))
+        log(`Automatically grabbed ${fY(lines.length)} proxies.`)
+        for (let line of lines) {
             proxies.push(new Proxy(line, (proxies[proxies.length-1]?.id || 0)+1))
         }
     });
@@ -220,10 +234,11 @@ async function main() {
     console.info(fG(`Lauching ${max} checks, estimated time : ${duration(dura(), true, true)} | ${datetocompact(dura()+Date.now())}`))
 
     let d = 0
+    let prevC = c
 
     while (c < max) {
 
-        if (!codes.find(c => !c.checked || c.checked == 'ongoing') || c-d > 100) codes = await actualizeCodes(max-c > 10000 ? 10000 : max-c), d = c
+        if (!codes.find(c => !c.checked || c.checked == 'ongoing') || c-d > 100) codes = await actualizeCodes(10000-codes.length+valids.length), d = c
 
         if (!proxy) {
 
@@ -240,7 +255,7 @@ async function main() {
 
         })
 
-        log(`Checked ${fG(`${numberFormat(c)}`)}/${fY(`${numberFormat(max)}`)} (${fG(valids.length)}), ${numberFormat(max-c)} code(s) remaining (≈ ${duration(dura(), true, true)}).`)
+        if (prevC != c) log(`Checked ${fG(`${numberFormat(c)}`)}/${fY(`${numberFormat(max)}`)} (${fG(valids.length)}), ${numberFormat(max-c)} code(s) remaining (≈ ${duration(dura(), true, true)}).`), prevC = c
         
         await wait(pause ? pauseMs : interval)
     }
@@ -248,8 +263,6 @@ async function main() {
     end(performance.now())
 
 }
-
-const localProxy = new Proxy(null)
 
 async function tryCode() {
 
