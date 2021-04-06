@@ -64,6 +64,7 @@ function dbug(str) {
 
 async function actualizeCodes(n)  {
     if (Date.now()-lastGrab < 10000) {
+        dbug(fR(`Codes actualization in cooldown, waiting ${duration(Date.now()-lastGrab, true, true)}.`))
         await wait(1000)
         return codes
     }
