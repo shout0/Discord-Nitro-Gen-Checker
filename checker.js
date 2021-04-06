@@ -6,13 +6,13 @@ const { performance } = require('perf_hooks')
 const { wait, duration, datetocompact, numberFormat, fY, fG, fR, bright } = require('./utils/')
 const { interval, proxy, proxiesType, proxiesfile, debug, codesfile, bURL, params } = require('./config.json').checker
 const { prefix, suffix, length, random } = require('./config.json').generator
-const generator = require('./generator.js')
+const generator = require('./generator.js');
 
-let codes = fs.readFileSync(codesfile, { encoding: 'utf-8' }).split('\n').filter(c => c).map(c => { return { code: c, checked: false, valid: null } })
+let codes = fs.readFileSync(codesfile, { encoding: 'utf-8' }).split('\n').filter(c => c).map(c => { return { code: c, c: false } })
 const codesMaxSize = 10000
 const valids = []
 let c = 0
-const max = Number(process.argv?.[2] || codes.length)
+const max = 1000000 || Number(process.argv?.[2] || codes.length)
 let pauseMs = interval
 let pause = false
 let pauseLog = 0
@@ -62,20 +62,17 @@ function dbug(str) {
     if (debug) log(`${fY('[DBUG]')} ${str}`)
 }
 
-async function actualizeCodes(n)  {
-    if (Date.now()-lastGrab < 10000) {
-        dbug(fR(`Codes actualization in cooldown, waiting ${duration(Date.now()-lastGrab, true, true)}.`))
-        await wait(1000)
-        return codes
-    }
+async function actualizeCodes()  {
+
     dbug(`Purging codes...`)
-    let newCodes = codes.filter(c => !c.checked && !c.valid)
+    let newCodes = codes.filter(c => !c.c || c.c == 'ongoing')
     dbug(`${fY(codes.length-newCodes.length)} codes purged.`)
+    
+    const n = codesMaxSize-newCodes.length
     if (n > 0) {
         dbug(`Adding ${fY(n)} more codes...`)
         const r = await generator(prefix, suffix, length, random, n)
-        newCodes.push(...r.codes.map(c => { return { code: c, checked: false, valid: null } }))
-        lastGrab = Date.now()
+        newCodes.push(...r.codes.map(c => { return { code: c, c: false } }))
         log(`Added ${fY(n)} more codes.`)
     }
     return newCodes
@@ -121,8 +118,8 @@ class Proxy {
     async check(url, code) {
 
         if (!this.ready) return {
-            checked: null,
-            valid: null
+            c: null,
+            v: null
         }
 
         this.used(1)
@@ -135,29 +132,29 @@ class Proxy {
             if (body?.redeemed == false && new Date(body?.expires_at) > Date.now()) {
                 log(fG(`[HIT] Check succeed, code : ${code}.`))
                 return {
-                    checked: true,
-                    valid: true
+                    c: true,
+                    v: true
                 }
             } else {
                 if (body.message == 'Unknown Gift Code') {
                     this.debug(fR(`Check failed (404)`))
                     return {
-                        checked: true,
-                        valid: false
+                        c: true,
+                        v: false
                     }
                 } else if (body.message == 'You are being rate limited.') {
                     let int = body.retry_after*1000
                     this.debug(fR(`Check missed (429), waiting ${numberFormat(int)}ms.`))
                     this.used(5, int)
                     return {
-                        checked: false,
-                        valid: null
+                        c: false,
+                        v: null
                     }
                 } else {
                     this.debug(fR(bright(`Unknow message (${body})`)))
                     return {
-                        checked: null,
-                        valid: null
+                        c: null,
+                        v: null
                     }
                 }
             } 
@@ -165,8 +162,8 @@ class Proxy {
             this.debug(fR(`Fetch missed (${e})`))
             if (!e.toString().toLowerCase().replace(/ +/g, '').includes('timedout')) this.working = false
             return {
-                checked: false,
-                valid: null
+                c: false,
+                v: null
             }
         }
 
@@ -220,6 +217,13 @@ if (proxy) {
 
 async function grabProxies() {
 
+    if (Date.now()-lastGrab < 10000) {
+        dbug(fR(`Codes actualization in cooldown, waiting ${duration(Date.now()-lastGrab, true, true)}.`))
+        await wait(1000)
+        return codes
+    }
+
+    lastGrab = Date.now()
     dbug("Autograbbing proxies...")
     await fetch("https://api.proxyscrape.com/?request=displayproxies&proxytype=http&timeout=10000&country=all&anonymity=all&ssl=yes").then(async (res) => {
         /**
@@ -237,7 +241,7 @@ async function grabProxies() {
 
 async function main() {
     
-    const dura = () => proxy ? (max-c)/(5*proxies.filter(p => p.working && p.ready).length)*60000 : (max-c).length/5*60000
+    const dura = () => proxy ? (max-c)/(5*proxies.filter(p => p.working).length)*60000 : (max-c).length/5*60000
     console.info(fG(`Lauching ${max} checks, estimated time : ${duration(dura(), true, true)} | ${datetocompact(dura()+Date.now())}`))
 
     let d = 0
@@ -245,16 +249,15 @@ async function main() {
 
     while (c < max) {
 
-        if ((!codes.find(c => !c.checked || c.checked == 'ongoing') || c-d > codesMaxSize/100) && !pause) {
+        if ((!codes.find(c => !c.c || c.c == 'ongoing') || c-d > Math.sqrt(codesMaxSize)) && !pause) {
             pauseMs = 1000
             pause = true
-            const ongoing = codes.filter(c => c.checked == 'ongoing')
-            codes = await actualizeCodes(codesMaxSize-ongoing.length+valids.length)
-            codes.push(...ongoing)
+            codes = await actualizeCodes()
             d = c
             pause = false
         }
 
+        let cNow = c
         if (!proxy) {
 
             let r = await tryCode()
@@ -270,7 +273,7 @@ async function main() {
 
         })
 
-        if (prevC != c) log(`Checked ${fG(`${numberFormat(c)}`)}/${fY(`${numberFormat(max)}`)} (${fG(valids.length)}), ${numberFormat(max-c)} code(s) remaining (≈ ${duration(dura(), true, true)}).`), prevC = c
+        if (prevC != c && cNow >= c) log(`Checked ${fG(`${numberFormat(c)}`)}/${fY(`${numberFormat(max)}`)} (${fG(valids.length)}), ${numberFormat(max-c)} code(s) remaining (≈ ${duration(dura(), true, true)}).`), prevC = c
         
         await wait(pause ? pauseMs : interval)
     }
@@ -281,10 +284,10 @@ async function main() {
 
 async function tryCode() {
 
-    let code = codes.find(c => !c.checked)
+    let code = codes.find(c => !c.c)
     if (!code) return
 
-    code.checked = "ongoing"
+    code.c = "ongoing"
 
     let matches = code.code.match(/[0-z]+/g)
     if (!matches) return //ensure for matching nitro code
@@ -308,9 +311,9 @@ async function tryCode() {
 
     const r = proxy ? await prox.check(fullURL, codeOK) : await localProxy.check(fullURL, codeOK)
 
-    for (const k in r) code[k] = r[k]
-    if (r.checked) c++
-    if (r.valid) valids.push(codeOK)
+    code.c = r.c
+    if (r.c) c++
+    if (r.v) valids.push(codeOK)
     return true
 
 }
@@ -335,7 +338,7 @@ function end(end) {
     mkdirp.sync(codesfile.match(/.*(\/|\\)/g)[0])
     if (fs.existsSync(codesfile)) fs.unlinkSync(codesfile) //overwrite codes
     writeStream = fs.createWriteStream(codesfile, { encoding: 'utf-8' })
-    writeStream.write(codes.filter(c => !c.checked).map(c => c.code).join('\n'))
+    writeStream.write(codes.filter(c => !c.c).map(c => c.code).join('\n'))
     writeStream.close()
 
     mkdirp.sync(proxiesfile.match(/.*(\/|\\)/g)[0])
