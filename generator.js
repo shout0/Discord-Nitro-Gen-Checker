@@ -5,7 +5,7 @@ module.exports = (prefix = '', suffix = '', length = 16, random = true, amount =
         const fs = require('fs')
         const mkdirp = require('mkdirp')
         const { performance } = require('perf_hooks')
-        const { rand, numberFormat } = require('./utils.js')
+        const { rand, numberFormat } = require('./utils/')
 
         const E = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789' //62
         const max = E.length-1
@@ -76,7 +76,7 @@ module.exports = (prefix = '', suffix = '', length = 16, random = true, amount =
 }
 
 if (require.main == module) {
-    const { duration } = require('./utils')
+    const { duration } = require('.')
     const { prefix, suffix, length, random, amount, debug, outfile } = require('./config.json').generator
     
     console.log(`Starting generation...`)
