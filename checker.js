@@ -257,7 +257,6 @@ async function main() {
             pause = false
         }
 
-        let cNow = c
         if (!proxy) {
 
             let r = await tryCode()
@@ -273,7 +272,7 @@ async function main() {
 
         })
 
-        if (prevC != c && cNow >= c) log(`Checked ${fG(`${numberFormat(c)}`)}/${fY(`${numberFormat(max)}`)} (${fG(valids.length)}), ${numberFormat(max-c)} code(s) remaining (≈ ${duration(dura(), true, true)}).`), prevC = c
+        if (prevC != c) log(`Checked ${fG(`${numberFormat(c)}`)}/${fY(`${numberFormat(max)}`)} (${fG(valids.length)}), ${numberFormat(max-c)} code(s) remaining (≈ ${duration(dura(), true, true)}).`), prevC = c
         
         await wait(pause ? pauseMs : interval)
     }
