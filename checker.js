@@ -9,6 +9,7 @@ const { prefix, suffix, length, random } = require('./config.json').generator
 const generator = require('./generator.js')
 
 let codes = fs.readFileSync(codesfile, { encoding: 'utf-8' }).split('\n').filter(c => c).map(c => { return { code: c, checked: false, valid: null } })
+const codesMaxSize = 10000
 const valids = []
 let c = 0
 const max = Number(process.argv?.[2] || codes.length)
@@ -62,7 +63,7 @@ function dbug(str) {
 }
 
 async function actualizeCodes(n)  {
-    if (Date.now()-lastGrab > 10000) {
+    if (Date.now()-lastGrab < 10000) {
         await wait(1000)
         return codes
     }
@@ -243,11 +244,11 @@ async function main() {
 
     while (c < max) {
 
-        if ((!codes.find(c => !c.checked || c.checked == 'ongoing') || c-d > 100) && !pause) {
+        if ((!codes.find(c => !c.checked || c.checked == 'ongoing') || c-d > codesMaxSize/100) && !pause) {
             pauseMs = 1000
             pause = true
             const ongoing = codes.filter(c => c.checked == 'ongoing')
-            codes = await actualizeCodes(10000-ongoing.length+valids.length)
+            codes = await actualizeCodes(codesMaxSize-ongoing.length+valids.length)
             codes.push(...ongoing)
             d = c
             pause = false
