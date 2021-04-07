@@ -8,11 +8,11 @@ const { interval, proxy, proxiesType, proxiesfile, debug, codesfile, bURL, param
 const { prefix, suffix, length, random } = require('./config.json').generator
 const generator = require('./generator.js');
 
-let codes = fs.readFileSync(codesfile, { encoding: 'utf-8' }).split('\n').filter(c => c).map(c => { return { code: c, c: false } })
+let codes = fs.readFileSync(codesfile, { encoding: 'utf-8' }).split('\n').filter(c => c).map(c => formatCode(c))
 const codesMaxSize = 10000
 const valids = []
 let c = 0
-const max = 1000000 || Number(process.argv?.[2] || codes.length)
+const max = Number(process.argv?.[2] || codes.length)
 let pauseMs = interval
 let pause = false
 let pauseLog = 0
@@ -62,17 +62,28 @@ function dbug(str) {
     if (debug) log(`${fY('[DBUG]')} ${str}`)
 }
 
+function formatCode(c) {
+    return {
+        code: c,
+        c: false,
+        t: Infinity,
+    }
+}
+
 async function actualizeCodes()  {
 
     dbug(`Purging codes...`)
-    let newCodes = codes.filter(c => !c.c || c.c == 'ongoing')
+    let newCodes = codes.filter(c => !c.c || c.c == 'ongoing').map(c => {
+        if (Date.now()-c.t > 30000) c.c = false, c.t = Infinity
+        return c
+    })
     dbug(`${fY(codes.length-newCodes.length)} codes purged.`)
     
     const n = codesMaxSize-newCodes.length
     if (n > 0) {
         dbug(`Adding ${fY(n)} more codes...`)
         const r = await generator(prefix, suffix, length, random, n)
-        newCodes.push(...r.codes.map(c => { return { code: c, c: false } }))
+        newCodes.push(...r.codes.map(c => formatCode(c)))
         log(`Added ${fY(n)} more codes.`)
     }
     return newCodes
@@ -249,12 +260,13 @@ async function main() {
 
     while (c < max) {
 
-        if ((!codes.find(c => !c.c || c.c == 'ongoing') || c-d > Math.sqrt(codesMaxSize)) && !pause) {
+        if (!pause && (c-d > Math.sqrt(codesMaxSize) || codes.filter(c => Date.now()-c.t > 30000).length > Math.sqrt(codesMaxSize) || !codes.find(c => !c.c && c.c != 'ongoing'))) {
             pauseMs = 1000
             pause = true
             codes = await actualizeCodes()
             d = c
             pause = false
+            pauseMs = interval
         }
 
         if (!proxy) {
@@ -287,6 +299,7 @@ async function tryCode() {
     if (!code) return
 
     code.c = "ongoing"
+    code.t = Date.now()
 
     let matches = code.code.match(/[0-z]+/g)
     if (!matches) return //ensure for matching nitro code
@@ -311,6 +324,7 @@ async function tryCode() {
     const r = proxy ? await prox.check(fullURL, codeOK) : await localProxy.check(fullURL, codeOK)
 
     code.c = r.c
+    code.t = Infinity
     if (r.c) c++
     if (r.v) valids.push(codeOK)
     return true
