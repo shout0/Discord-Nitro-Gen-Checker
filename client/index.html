@@ -1,0 +1,55 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Discord Nitro Checker</title>
+        <link rel="shortcut icon" type="image/png" href="https://static.wikia.nocookie.net/discord/images/e/ea/Nitro.png"/>
+        <meta property="og:title" content="Discord Nitro Checker">
+        <meta property="og:type" content="website">
+        <meta property="og:description" content="Online, in real-time monitoring for the Discord Nitro Checker.">
+        <meta property="og:image" content="https://static.wikia.nocookie.net/discord/images/e/ea/Nitro.png">
+        <link href="./libs/bootstrap.min.css" rel="stylesheet">
+        <link href="./css/style.css" rel="stylesheet">
+        <script src="./libs/bootstrap.bundle.js"></script>
+    </head>
+    <body>
+        <script src="./libs/socket.io-client.min.js"></script>
+        <script src="./js/client.js"></script>
+        <div class="container">
+            <h1 class="display-1 text-center">Discord Nitro Checker</h1>
+            <hr class="my-2">
+            <div class="head">
+                <div class="col-12">
+                    <div class="bg-dark rounded p-2 h-100">
+                        <div class="row">
+                            <div class="col-6 h-100">
+                                <div class="p-2">
+                                    <h1 class="display-5 text-center">Codes</h1>
+                                    <hr class="my-2">
+                                    <p class="my-1"><b>Codes checked :</b> <span class="text-warning" id="codesChecked"></span></p>
+                                    <p class="my-1"><b>Codes remaining :</b> <span class="text-warning" id="codesRemaining"></span></p>
+                                    <p class="my-1"><b>Codes valids :</b> <span class="text-success" id="codesValids"></span></p>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="p-2">
+                                    <h1 class="display-5 text-center">Proxies</h1>
+                                    <hr class="my-2">
+                                    <p class="my-1"><b>Proxies up :</b> <span class="text-success" id="proxiesUp"></span></p>
+                                    <p class="my-1"><b>Proxies alive :</b> <span class="text-warning" id="proxiesAlive"></span></p>
+                                    <p class="my-1"><b>Proxies dead :</b> <span class="text-danger" id="proxiesDead"></span></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="body mt-2">
+                <div class="col-12">
+                    <div class="bg-dark rounded p-2 h-100" id="logs">
+                    
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>

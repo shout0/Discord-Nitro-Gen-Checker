@@ -3,18 +3,33 @@ const mkdirp = require('mkdirp')
 const ProxyAgent = require('proxy-agent');
 const fs = require('fs')
 const { performance } = require('perf_hooks')
-const { wait, duration, datetocompact, numberFormat, fY, fG, fR, bright } = require('./utils.js')
+const { wait, duration, datetocompact, numberFormat, fY, fG, fR, bright } = require('./utils/')
 const { interval, proxy, proxiesType, proxiesfile, debug, codesfile, bURL, params } = require('./config.json').checker
 const { prefix, suffix, length, random } = require('./config.json').generator
-const generator = require('./generator.js')
+let { enabled, port, updateRate, privkey, fullchain } = require('./config.json').client
+let wss
+if (enabled) {
+    const WebSocket = require('ws');
+    const https = require('https');
+    privkey = fs.readFileSync(privkey, 'utf8');
+    fullchain = fs.readFileSync(fullchain, 'utf8');
+    const httpsServer = https.createServer({ key: privkey, cert: fullchain });
+    httpsServer.listen(port);
+    wss = new WebSocket.Server( { server: httpsServer } )
+}
+const generator = require('./generator.js');
 
-let codes = fs.readFileSync(codesfile, { encoding: 'utf-8' }).split('\n').filter(c => c).map(c => { return { code: c, checked: false, valid: null } })
+let codes = fs.readFileSync(codesfile, { encoding: 'utf-8' }).split('\n').filter(c => c).map(c => formatCode(c))
+/** @type {WebSocket[]} */
+const clients = []
+const codesMaxSize = 10000
 const valids = []
 let c = 0
 const max = Number(process.argv?.[2] || codes.length)
 let pauseMs = interval
 let pause = false
 let pauseLog = 0
+let lastGrab = 0
 
 process.on("SIGINT", () => end(performance.now()) );
 
@@ -48,26 +63,77 @@ log(`                                            @@@@@@@@@
             
             `)
 
+if (wss) wss.on("connection", (ws) => {
+    clients.push(ws)
+    dbug(`New ws connection : ${ws.id}`)
+    ws.on("disconnect", () => {
+        clients.splice(clients.indexOf(ws), 1)
+        dbug(`ws connection closed : ${ws.id}`)
+    })
+})
+if (wss) setInterval(() => {
+    dbug(`Sockets actualization`)
+    const up = proxies.filter(p => p.working && p.readyAt <= Date.now()).length
+    const alive = proxies.filter(p => p.working).length
+    const dead = proxies.filter(p => !p.working).length
+    clients.forEach(ws => {
+        ws.send(JSON.stringify({
+            type: 'codes',
+            toCheck: max,
+            checked: c,
+            valids: valids.length,
+        }))
+        ws.send(JSON.stringify({
+            type: 'proxies',
+            up,
+            alive,
+            dead,
+        }))
+    })
+}, updateRate);
+
 function log(str) {
     if (pauseLog) wait(pauseLog).then(() => {
         pauseLog = 0
         log(str)
     })
-    else console.log(str)
+    else {
+        console.log(str)
+        if (wss) clients.forEach(ws => {
+            ws.send(JSON.stringify({
+                type: "log",
+                message: str.replace(/\[\d{1,2}m/g, ''),
+            }))
+        })
+    }
 }
 
 function dbug(str) {
     if (debug) log(`${fY('[DBUG]')} ${str}`)
 }
 
-async function actualizeCodes(n)  { 
+function formatCode(c) {
+    return {
+        code: c,
+        c: false,
+        t: Infinity,
+    }
+}
+
+async function actualizeCodes()  {
+
     dbug(`Purging codes...`)
-    let newCodes = codes.filter(c => !c.checked && !c.valid)
+    let newCodes = codes.filter(c => !c.c || c.c == 'ongoing').map(c => {
+        if (Date.now()-c.t > 30000) c.c = false, c.t = Infinity
+        return c
+    })
     dbug(`${fY(codes.length-newCodes.length)} codes purged.`)
+    
+    const n = codesMaxSize-newCodes.length
     if (n > 0) {
         dbug(`Adding ${fY(n)} more codes...`)
         const r = await generator(prefix, suffix, length, random, n)
-        newCodes.push(...r.codes.map(c => { return { code: c, checked: false, valid: null } }))
+        newCodes.push(...r.codes.map(c => formatCode(c)))
         log(`Added ${fY(n)} more codes.`)
     }
     return newCodes
@@ -113,8 +179,8 @@ class Proxy {
     async check(url, code) {
 
         if (!this.ready) return {
-            checked: null,
-            valid: null
+            c: null,
+            v: null
         }
 
         this.used(1)
@@ -125,41 +191,40 @@ class Proxy {
             const body = await (await fetch(url, this.proxy ? { agent: new ProxyAgent(this.URI), headers: { 'User-Agent': 'unknown' } } : { headers: { 'User-Agent': 'unknown' } } )).json()
 
             if (body?.redeemed == false && new Date(body?.expires_at) > Date.now()) {
-                valids.push(code)
-                log(fG(`{${this.id}} Check succeed, code : ${code}.`))
+                log(fG(`[HIT] Check succeed, code : ${code}.`))
                 return {
-                    checked: true,
-                    valid: true
+                    c: true,
+                    v: true
                 }
             } else {
                 if (body.message == 'Unknown Gift Code') {
                     this.debug(fR(`Check failed (404)`))
                     return {
-                        checked: true,
-                        valid: false
+                        c: true,
+                        v: false
                     }
                 } else if (body.message == 'You are being rate limited.') {
                     let int = body.retry_after*1000
-                    this.debug(fR(`Check failed (429), waiting ${numberFormat(int)}ms.`))
+                    this.debug(fR(`Check missed (429), waiting ${numberFormat(int)}ms.`))
                     this.used(5, int)
                     return {
-                        checked: false,
-                        valid: null
+                        c: false,
+                        v: null
                     }
                 } else {
                     this.debug(fR(bright(`Unknow message (${body})`)))
                     return {
-                        checked: null,
-                        valid: null
+                        c: null,
+                        v: null
                     }
                 }
             } 
         } catch(e) {
-            this.debug(fR(`Fetch failed (${e})`))
-            if (!e.toString().includes('timed out')) this.working = false
+            this.debug(fR(`Fetch missed (${e})`))
+            if (!e.toString().toLowerCase().replace(/ +/g, '').includes('timedout')) this.working = false
             return {
-                checked: false,
-                valid: null
+                c: false,
+                v: null
             }
         }
 
@@ -213,6 +278,13 @@ if (proxy) {
 
 async function grabProxies() {
 
+    if (Date.now()-lastGrab < 10000) {
+        dbug(fR(`Codes actualization in cooldown, waiting ${duration(Date.now()-lastGrab, true, true)}.`))
+        await wait(1000)
+        return codes
+    }
+
+    lastGrab = Date.now()
     dbug("Autograbbing proxies...")
     await fetch("https://api.proxyscrape.com/?request=displayproxies&proxytype=http&timeout=10000&country=all&anonymity=all&ssl=yes").then(async (res) => {
         /**
@@ -230,7 +302,7 @@ async function grabProxies() {
 
 async function main() {
     
-    const dura = () => proxy ? (max-c)/(5*proxies.filter(p => p.working && p.ready).length)*60000 : (max-c).length/5*60000
+    const dura = () => proxy ? (max-c)/(5*proxies.filter(p => p.working).length)*60000 : (max-c).length/5*60000
     console.info(fG(`Lauching ${max} checks, estimated time : ${duration(dura(), true, true)} | ${datetocompact(dura()+Date.now())}`))
 
     let d = 0
@@ -238,7 +310,14 @@ async function main() {
 
     while (c < max) {
 
-        if (!codes.find(c => !c.checked || c.checked == 'ongoing') || c-d > 100) codes = await actualizeCodes(10000-codes.length+valids.length), d = c
+        if (!pause && (c-d > Math.sqrt(codesMaxSize) || codes.filter(c => Date.now()-c.t > 30000).length > Math.sqrt(codesMaxSize) || !codes.find(c => !c.c && c.c != 'ongoing'))) {
+            pauseMs = 1000
+            pause = true
+            codes = await actualizeCodes()
+            d = c
+            pause = false
+            pauseMs = interval
+        }
 
         if (!proxy) {
 
@@ -266,10 +345,11 @@ async function main() {
 
 async function tryCode() {
 
-    let code = codes.find(c => !c.checked)
+    let code = codes.find(c => !c.c)
     if (!code) return
 
-    code.checked = "ongoing"
+    code.c = "ongoing"
+    code.t = Date.now()
 
     let matches = code.code.match(/[0-z]+/g)
     if (!matches) return //ensure for matching nitro code
@@ -293,9 +373,10 @@ async function tryCode() {
 
     const r = proxy ? await prox.check(fullURL, codeOK) : await localProxy.check(fullURL, codeOK)
 
-    for (const k in r) code[k] = r[k]
-    if (r.checked) c++
-    if (r.valid) valids.push(codeOK)
+    code.c = r.c
+    code.t = Infinity
+    if (r.c) c++
+    if (r.v) valids.push(codeOK)
     return true
 
 }
@@ -320,7 +401,7 @@ function end(end) {
     mkdirp.sync(codesfile.match(/.*(\/|\\)/g)[0])
     if (fs.existsSync(codesfile)) fs.unlinkSync(codesfile) //overwrite codes
     writeStream = fs.createWriteStream(codesfile, { encoding: 'utf-8' })
-    writeStream.write(codes.filter(c => !c.checked).map(c => c.code).join('\n'))
+    writeStream.write(codes.filter(c => !c.c).map(c => c.code).join('\n'))
     writeStream.close()
 
     mkdirp.sync(proxiesfile.match(/.*(\/|\\)/g)[0])
