@@ -6,9 +6,22 @@ const { performance } = require('perf_hooks')
 const { wait, duration, datetocompact, numberFormat, fY, fG, fR, bright } = require('./utils/')
 const { interval, proxy, proxiesType, proxiesfile, debug, codesfile, bURL, params } = require('./config.json').checker
 const { prefix, suffix, length, random } = require('./config.json').generator
+let { enabled, port, updateRate, privkey, fullchain } = require('./config.json').client
+let wss
+if (enabled) {
+    const WebSocket = require('ws');
+    const https = require('https');
+    privkey = fs.readFileSync(privkey, 'utf8');
+    fullchain = fs.readFileSync(fullchain, 'utf8');
+    const httpsServer = https.createServer({ key: privkey, cert: fullchain });
+    httpsServer.listen(port);
+    wss = new WebSocket.Server( { server: httpsServer } )
+}
 const generator = require('./generator.js');
 
 let codes = fs.readFileSync(codesfile, { encoding: 'utf-8' }).split('\n').filter(c => c).map(c => formatCode(c))
+/** @type {WebSocket[]} */
+const clients = []
 const codesMaxSize = 10000
 const valids = []
 let c = 0
@@ -50,12 +63,49 @@ log(`                                            @@@@@@@@@
             
             `)
 
+if (wss) wss.on("connection", (ws) => {
+    clients.push(ws)
+    dbug(`New ws connection : ${ws.id}`)
+    ws.on("disconnect", () => {
+        clients.splice(clients.indexOf(ws), 1)
+        dbug(`ws connection closed : ${ws.id}`)
+    })
+})
+if (wss) setInterval(() => {
+    dbug(`Sockets actualization`)
+    const up = proxies.filter(p => p.working && p.readyAt <= Date.now()).length
+    const alive = proxies.filter(p => p.working).length
+    const dead = proxies.filter(p => !p.working).length
+    clients.forEach(ws => {
+        ws.send(JSON.stringify({
+            type: 'codes',
+            toCheck: max,
+            checked: c,
+            valids: valids.length,
+        }))
+        ws.send(JSON.stringify({
+            type: 'proxies',
+            up,
+            alive,
+            dead,
+        }))
+    })
+}, updateRate);
+
 function log(str) {
     if (pauseLog) wait(pauseLog).then(() => {
         pauseLog = 0
         log(str)
     })
-    else console.log(str)
+    else {
+        console.log(str)
+        if (wss) clients.forEach(ws => {
+            ws.send(JSON.stringify({
+                type: "log",
+                message: str.replace(/\[\d{1,2}m/g, ''),
+            }))
+        })
+    }
 }
 
 function dbug(str) {

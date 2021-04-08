@@ -1,0 +1,11 @@
+.head {
+    height: 25%;
+    color: #EAEAEA;
+}
+
+.body {
+    height: 55%;
+    overflow: auto;
+    max-height: 55%;
+    color: #EAEAEA;
+}
