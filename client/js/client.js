@@ -1,13 +1,14 @@
 const ws = new WebSocket("wss://catadev.ga/wss")
 
-let lines = []
+const lines = []
 ws.addEventListener('message', (event) => {
     const o = JSON.parse(event.data)
     switch (o.type) {
         case 'log':
             const logs = document.getElementById('logs')
+            const max = Math.floor(logs.clientHeight/getLineHeight(logs))
             lines.push(o.message)
-            if (lines.length > 16) lines.shift()
+            if (lines.length > max) lines.shift()
             logs.innerHTML = lines.join('<br>')
             logs.scrollTop = logs.scrollHeight;
             break
@@ -23,3 +24,17 @@ ws.addEventListener('message', (event) => {
             break;
     }
 })
+
+function getLineHeight(el) {
+    let temp = document.createElement(el.nodeName), ret;
+    temp.setAttribute("style", "margin:0; padding:0; "
+        + "font-family:" + (el.style.fontFamily || "inherit") + "; "
+        + "font-size:" + (el.style.fontSize || "inherit"));
+    temp.innerHTML = "A";
+
+    el.parentNode.appendChild(temp);
+    ret = temp.clientHeight;
+    temp.parentNode.removeChild(temp);
+
+    return ret;
+}
