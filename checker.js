@@ -9,16 +9,20 @@ const { prefix, suffix, length, random } = require('./config.json').generator
 let { enabled, port, updateRate, privkey, fullchain } = require('./config.json').client
 let wss
 if (enabled) {
-    const WebSocket = require('ws');
-    const https = require('https');
-    privkey = fs.readFileSync(privkey, 'utf8');
-    fullchain = fs.readFileSync(fullchain, 'utf8');
-    const httpsServer = https.createServer({ key: privkey, cert: fullchain });
-    httpsServer.listen(port);
-    wss = new WebSocket.Server( { server: httpsServer } )
+    try {
+        const WebSocket = require('ws');
+        const https = require('https');
+        privkey = fs.readFileSync(privkey, 'utf8');
+        fullchain = fs.readFileSync(fullchain, 'utf8');
+        const httpsServer = https.createServer({ key: privkey, cert: fullchain });
+        httpsServer.listen(port);
+        wss = new WebSocket.Server( { server: httpsServer } )
+    } catch (e) {}
 }
 const generator = require('./generator.js');
 
+mkdirp.sync(codesfile.match(/.*(\/|\\)/g)[0])
+if (!fs.existsSync(codesfile)) fs.writeFileSync(codesfile, "")
 let codes = fs.readFileSync(codesfile, { encoding: 'utf-8' }).split('\n').filter(c => c).map(c => formatCode(c))
 /** @type {WebSocket[]} */
 const clients = []
