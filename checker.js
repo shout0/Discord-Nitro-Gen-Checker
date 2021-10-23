@@ -1,4 +1,4 @@
-const fetch = require('node-fetch');
+const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 const mkdirp = require('mkdirp')
 const ProxyAgent = require('proxy-agent');
 const fs = require('fs')
