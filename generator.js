@@ -76,7 +76,7 @@ module.exports = (prefix = '', suffix = '', length = 16, random = true, amount =
 }
 
 if (require.main == module) {
-    const { duration } = require('.')
+    const { duration } = require('./utils')
     const { prefix, suffix, length, random, amount, debug, outfile } = require('./config.json').generator
     
     console.log(`Starting generation...`)
