@@ -8,7 +8,7 @@
     "intl": "^1.2.5",
     "mkdirp": "^2.1.5",
     "node-fetch": "^3.0.0",
-    "proxy-agent": "^5.0.0",
+    "proxy-agent": "^6.3.0",
     "ws": "^8.2.3"
   },
   "devDependencies": {},
